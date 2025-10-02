@@ -465,7 +465,8 @@ where
         self.writer.seek(SeekFrom::Start(40))?;
         // Calculate and write the actual mdat size (write_pos is current total write position, minus 32 bytes for headers)
         // Using large size format (64-bit)
-        self.writer.write(&(self.write_pos - 32).to_be_bytes())?;
+        self.writer
+            .write_all(&(self.write_pos - 32).to_be_bytes())?;
         // Restore file cursor to current write position
         self.writer.seek(SeekFrom::Start(self.write_pos))?;
         Ok(())
@@ -686,82 +687,82 @@ where
             cursor.write_all(b"mvhd")?;
             if self.create_time != 0 {
                 // version & flag
-                cursor.write(&[0x01, 0x00, 0x00, 0x00])?;
+                cursor.write_all(&[0x01, 0x00, 0x00, 0x00])?;
                 // create_time
-                cursor.write(&self.create_time.to_be_bytes())?;
+                cursor.write_all(&self.create_time.to_be_bytes())?;
                 // modify_time
-                cursor.write(&self.create_time.to_be_bytes())?;
+                cursor.write_all(&self.create_time.to_be_bytes())?;
             } else {
                 // version & flag
-                cursor.write(&[0x00; 4])?;
+                cursor.write_all(&[0x00; 4])?;
                 // create_time
-                cursor.write(&[0x00; 4])?;
+                cursor.write_all(&[0x00; 4])?;
                 // modify_time
-                cursor.write(&[0x00; 4])?;
+                cursor.write_all(&[0x00; 4])?;
             }
 
             // timescale
             const TIMESCALE: u32 = 1000;
             let track = self.video_track.as_ref().unwrap();
-            cursor.write(&TIMESCALE.to_be_bytes())?;
+            cursor.write_all(&TIMESCALE.to_be_bytes())?;
             // duration
             let duration = self.duration / (track.timescale / TIMESCALE);
             if self.create_time != 0 {
-                cursor.write(&(duration as u64).to_be_bytes())?;
+                cursor.write_all(&(duration as u64).to_be_bytes())?;
             } else {
-                cursor.write(&(duration).to_be_bytes())?;
+                cursor.write_all(&(duration).to_be_bytes())?;
             }
             // Write playback rate (0x00010000 = 1.0, normal speed)
             const RATE: u32 = 0x00010000;
-            cursor.write(&RATE.to_be_bytes())?;
+            cursor.write_all(&RATE.to_be_bytes())?;
             // Write playback volume (0x0100 = 1.0, full volume)
             const VOLUME: u16 = 0x0100;
-            cursor.write(&VOLUME.to_be_bytes())?;
+            cursor.write_all(&VOLUME.to_be_bytes())?;
             // reserved
-            cursor.write(&[0x00; 10])?;
+            cursor.write_all(&[0x00; 10])?;
             // Write unity matrix for video transform
-            cursor.write(&0x00010000u32.to_be_bytes())?;
-            cursor.write(&[0x00; 12])?;
-            cursor.write(&0x00010000u32.to_be_bytes())?;
-            cursor.write(&[0x00; 12])?;
-            cursor.write(&0x40000000u32.to_be_bytes())?;
+            cursor.write_all(&0x00010000u32.to_be_bytes())?;
+            cursor.write_all(&[0x00; 12])?;
+            cursor.write_all(&0x00010000u32.to_be_bytes())?;
+            cursor.write_all(&[0x00; 12])?;
+            cursor.write_all(&0x40000000u32.to_be_bytes())?;
             // pre_defined
-            cursor.write(&[0x00; 24])?;
+            cursor.write_all(&[0x00; 24])?;
             // next_track_id
-            cursor.write(&self.track_ids.to_be_bytes())?;
+            cursor.write_all(&self.track_ids.to_be_bytes())?;
         })
     }
     fn write_tkhd(&self, track: &Track, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
         mp4_box!(cursor, {
             cursor.write_all(b"tkhd")?;
             // version & flag
-            cursor.write(&7u32.to_be_bytes())?;
+            cursor.write_all(&7u32.to_be_bytes())?;
             // create_time
-            cursor.write(&[0x00; 4])?;
+            cursor.write_all(&[0x00; 4])?;
             // modify_time
-            cursor.write(&[0x00; 4])?;
+            cursor.write_all(&[0x00; 4])?;
             // track_id
-            cursor.write(&track.id.to_be_bytes())?;
+            cursor.write_all(&track.id.to_be_bytes())?;
             // reserved
-            cursor.write(&[0x00; 4])?;
+            cursor.write_all(&[0x00; 4])?;
             // duration
-            cursor.write(&(track.duration / (track.timescale / 1000)).to_be_bytes())?; //
-            cursor.write(&[0; 12])?;
+            cursor.write_all(&(track.duration / (track.timescale / 1000)).to_be_bytes())?; //
+            cursor.write_all(&[0; 12])?;
             const VOLUME: u16 = 0x0100;
-            cursor.write(&VOLUME.to_be_bytes())?;
+            cursor.write_all(&VOLUME.to_be_bytes())?;
             // reserved
-            cursor.write(&[0x00; 2])?;
+            cursor.write_all(&[0x00; 2])?;
             // matrix
-            cursor.write(&0x00010000u32.to_be_bytes())?;
-            cursor.write(&[0x00; 12])?;
-            cursor.write(&0x00010000u32.to_be_bytes())?;
-            cursor.write(&[0x00; 12])?;
-            cursor.write(&0x40000000u32.to_be_bytes())?;
+            cursor.write_all(&0x00010000u32.to_be_bytes())?;
+            cursor.write_all(&[0x00; 12])?;
+            cursor.write_all(&0x00010000u32.to_be_bytes())?;
+            cursor.write_all(&[0x00; 12])?;
+            cursor.write_all(&0x40000000u32.to_be_bytes())?;
             if let TrackType::Video = track.track_type {
-                cursor.write(&(track.width * 0x10000).to_be_bytes())?;
-                cursor.write(&(track.height * 0x10000).to_be_bytes())?;
+                cursor.write_all(&(track.width * 0x10000).to_be_bytes())?;
+                cursor.write_all(&(track.height * 0x10000).to_be_bytes())?;
             } else {
-                cursor.write(&[0x00; 8])?;
+                cursor.write_all(&[0x00; 8])?;
             }
         })
     }
@@ -770,19 +771,19 @@ where
         mp4_box!(cursor, {
             cursor.write_all(b"hdlr")?;
             // version & flag
-            cursor.write(&[0x00; 4])?;
+            cursor.write_all(&[0x00; 4])?;
             // pre_defined
-            cursor.write(&[0x00; 4])?;
+            cursor.write_all(&[0x00; 4])?;
             if let TrackType::Video = track.track_type {
                 cursor.write_all(b"vide")?;
                 // reserved
-                cursor.write(&[0x00; 12])?;
+                cursor.write_all(&[0x00; 12])?;
                 // name
                 cursor.write_all(b"VideoHandler\x00")?;
             } else {
                 cursor.write_all(b"soun")?;
                 // reserved
-                cursor.write(&[0x00; 12])?;
+                cursor.write_all(&[0x00; 12])?;
                 // name
                 cursor.write_all(b"SoundHandler\x00")?;
             }
@@ -792,93 +793,93 @@ where
         mp4_box!(cursor, {
             cursor.write_all(b"mdhd")?;
             // version & flag
-            cursor.write(&[0x00; 4])?;
+            cursor.write_all(&[0x00; 4])?;
             // create_time
-            cursor.write(&[0x00; 4])?;
+            cursor.write_all(&[0x00; 4])?;
             // modify_time
-            cursor.write(&[0x00; 4])?;
+            cursor.write_all(&[0x00; 4])?;
             // timescale
-            cursor.write(&track.timescale.to_be_bytes())?;
+            cursor.write_all(&track.timescale.to_be_bytes())?;
             // duration
-            cursor.write(&track.duration.to_be_bytes())?;
+            cursor.write_all(&track.duration.to_be_bytes())?;
             // language
             let lang_code: u32 = (self.language[0] as u32 & 31) << 10
                 | (self.language[1] as u32 & 31) << 5
                 | (self.language[2] as u32 & 31);
-            cursor.write(&(lang_code as u16).to_be_bytes())?;
-            cursor.write(&[0, 0])?;
+            cursor.write_all(&(lang_code as u16).to_be_bytes())?;
+            cursor.write_all(&[0, 0])?;
         })
     }
     fn write_vmhd(&self, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
         mp4_box!(cursor, {
             cursor.write_all(b"vmhd")?;
-            cursor.write(&[0, 0, 0, 1])?;
-            cursor.write(&[0x00; 8])?;
+            cursor.write_all(&[0, 0, 0, 1])?;
+            cursor.write_all(&[0x00; 8])?;
         })
     }
     fn write_smhd(&self, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
         mp4_box!(cursor, {
             cursor.write_all(b"smhd")?;
             // version & flag
-            cursor.write(&[0x00; 4])?;
-            cursor.write(&[0x00; 4])?;
+            cursor.write_all(&[0x00; 4])?;
+            cursor.write_all(&[0x00; 4])?;
         })
     }
     fn write_hvcc(&self, track: &Track, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
         mp4_box!(cursor, {
             cursor.write_all(b"hvcC")?;
             // configurationVersion
-            cursor.write(&[0x01])?;
+            cursor.write_all(&[0x01])?;
             // rofile Space (2), Tier (1), Profile (5)
-            cursor.write(&[0x01])?;
+            cursor.write_all(&[0x01])?;
             // Profile Compatibility
-            cursor.write(&0x60000000u32.to_be_bytes())?;
+            cursor.write_all(&0x60000000u32.to_be_bytes())?;
             // progressive, interlaced, non packed constraint, frame only constraint flags
-            cursor.write(&[0x00; 2])?;
+            cursor.write_all(&[0x00; 2])?;
             // constraint indicator flags
-            cursor.write(&[0; 4])?;
+            cursor.write_all(&[0; 4])?;
             // level_idc
-            cursor.write(&[0])?;
+            cursor.write_all(&[0])?;
             // Min Spatial Segmentation
-            cursor.write(&0xf000u16.to_be_bytes())?;
+            cursor.write_all(&0xf000u16.to_be_bytes())?;
             // Parallelism Type
-            cursor.write(&[0xfc])?;
+            cursor.write_all(&[0xfc])?;
             // Chroma Format
-            cursor.write(&[0xfc])?;
+            cursor.write_all(&[0xfc])?;
             // Luma Depth
-            cursor.write(&[0xf8])?;
+            cursor.write_all(&[0xf8])?;
             // Chroma Depth
-            cursor.write(&[0xf8])?;
+            cursor.write_all(&[0xf8])?;
             // Avg Frame Rate
-            cursor.write(&[0; 2])?;
+            cursor.write_all(&[0; 2])?;
             // ConstantFrameRate (2), NumTemporalLayers (3), TemporalIdNested (1), LengthSizeMinusOne (2)
-            cursor.write(&[0x03])?;
+            cursor.write_all(&[0x03])?;
             // Num Of Arrays
-            cursor.write(&[0x03])?;
-            cursor.write(&[(1 << 7) | (32 & 0x3f)])?; //vps
+            cursor.write_all(&[0x03])?;
+            cursor.write_all(&[(1 << 7) | (32 & 0x3f)])?; //vps
 
             if let Some(vps) = track.vps.as_ref() {
-                cursor.write(&[0x00, 0x01])?;
-                cursor.write(&(vps.len() as u16).to_be_bytes())?;
-                cursor.write(&vps[..])?;
+                cursor.write_all(&[0x00, 0x01])?;
+                cursor.write_all(&(vps.len() as u16).to_be_bytes())?;
+                cursor.write_all(&vps[..])?;
             } else {
-                cursor.write(&[0x00; 2])?;
+                cursor.write_all(&[0x00; 2])?;
             }
-            cursor.write(&[(1 << 7) | (33 & 0x3f)])?; //sps
+            cursor.write_all(&[(1 << 7) | (33 & 0x3f)])?; //sps
             if let Some(sps) = track.sps.as_ref() {
-                cursor.write(&[0x00, 0x01])?;
-                cursor.write(&(sps.len() as u16).to_be_bytes())?;
-                cursor.write(&sps[..])?;
+                cursor.write_all(&[0x00, 0x01])?;
+                cursor.write_all(&(sps.len() as u16).to_be_bytes())?;
+                cursor.write_all(&sps[..])?;
             } else {
-                cursor.write(&[0x00; 2])?;
+                cursor.write_all(&[0x00; 2])?;
             }
-            cursor.write(&[(1 << 7) | (34 & 0x3f)])?; //pps
+            cursor.write_all(&[(1 << 7) | (34 & 0x3f)])?; //pps
             if let Some(pps) = track.pps.as_ref() {
-                cursor.write(&[0x00, 0x01])?;
-                cursor.write(&(pps.len() as u16).to_be_bytes())?;
-                cursor.write(&pps[..])?;
+                cursor.write_all(&[0x00, 0x01])?;
+                cursor.write_all(&(pps.len() as u16).to_be_bytes())?;
+                cursor.write_all(&pps[..])?;
             } else {
-                cursor.write(&[0x00; 2])?;
+                cursor.write_all(&[0x00; 2])?;
             }
         })
     }
@@ -886,37 +887,37 @@ where
         mp4_box!(cursor, {
             cursor.write_all(b"avcC")?;
             // configurationVersion
-            cursor.write(&[0x01])?;
+            cursor.write_all(&[0x01])?;
             if let Some(sps) = track.sps.as_ref() {
-                cursor.write(&sps[1..4])?;
-                cursor.write(&[255])?;
-                cursor.write(&[0xe0 | 1])?;
-                cursor.write(&(sps.len() as u16).to_be_bytes())?;
-                cursor.write(&sps[..])?;
+                cursor.write_all(&sps[1..4])?;
+                cursor.write_all(&[255])?;
+                cursor.write_all(&[0xe0 | 1])?;
+                cursor.write_all(&(sps.len() as u16).to_be_bytes())?;
+                cursor.write_all(&sps[..])?;
             }
             if let Some(pps) = track.pps.as_ref() {
-                cursor.write(&[1])?;
-                cursor.write(&(pps.len() as u16).to_be_bytes())?;
-                cursor.write(&pps[..])?;
+                cursor.write_all(&[1])?;
+                cursor.write_all(&(pps.len() as u16).to_be_bytes())?;
+                cursor.write_all(&pps[..])?;
             }
         })
     }
     fn write_hvc1(&self, track: &Track, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
         mp4_box!(cursor, {
             cursor.write_all(b"hvc1")?;
-            cursor.write(&[0x00; 6])?;
-            cursor.write(&[0x00, 0x01])?;
-            cursor.write(&[0x00; 16])?;
+            cursor.write_all(&[0x00; 6])?;
+            cursor.write_all(&[0x00, 0x01])?;
+            cursor.write_all(&[0x00; 16])?;
             if let TrackType::Video = track.track_type {
-                cursor.write(&(track.width as u16).to_be_bytes())?;
-                cursor.write(&(track.height as u16).to_be_bytes())?;
-                cursor.write(&0x00480000u32.to_be_bytes())?;
-                cursor.write(&0x00480000u32.to_be_bytes())?;
-                cursor.write(&[0x00; 4])?;
-                cursor.write(&[0x00, 0x01])?;
-                cursor.write(&[0x00; 32])?;
-                cursor.write(&[0x00, 0x18])?;
-                cursor.write(&(-1 as i16).to_be_bytes())?;
+                cursor.write_all(&(track.width as u16).to_be_bytes())?;
+                cursor.write_all(&(track.height as u16).to_be_bytes())?;
+                cursor.write_all(&0x00480000u32.to_be_bytes())?;
+                cursor.write_all(&0x00480000u32.to_be_bytes())?;
+                cursor.write_all(&[0x00; 4])?;
+                cursor.write_all(&[0x00, 0x01])?;
+                cursor.write_all(&[0x00; 32])?;
+                cursor.write_all(&[0x00, 0x18])?;
+                cursor.write_all(&(-1 as i16).to_be_bytes())?;
                 self.write_hvcc(track, cursor)?;
             }
         })
@@ -924,20 +925,20 @@ where
     fn write_avc1(&self, track: &Track, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
         mp4_box!(cursor, {
             cursor.write_all(b"avc1")?;
-            cursor.write(&[0x00; 6])?;
-            cursor.write(&[0x00, 0x01])?;
-            cursor.write(&[0x00; 16])?;
+            cursor.write_all(&[0x00; 6])?;
+            cursor.write_all(&[0x00, 0x01])?;
+            cursor.write_all(&[0x00; 16])?;
 
             if let TrackType::Video = track.track_type {
-                cursor.write(&(track.width as u16).to_be_bytes())?;
-                cursor.write(&(track.height as u16).to_be_bytes())?;
-                cursor.write(&0x00480000u32.to_be_bytes())?;
-                cursor.write(&0x00480000u32.to_be_bytes())?;
-                cursor.write(&[0x00; 4])?;
-                cursor.write(&[0x00, 0x01])?;
-                cursor.write(&[0x00; 32])?;
-                cursor.write(&[0x00, 0x18])?;
-                cursor.write(&(-1 as i16).to_be_bytes())?;
+                cursor.write_all(&(track.width as u16).to_be_bytes())?;
+                cursor.write_all(&(track.height as u16).to_be_bytes())?;
+                cursor.write_all(&0x00480000u32.to_be_bytes())?;
+                cursor.write_all(&0x00480000u32.to_be_bytes())?;
+                cursor.write_all(&[0x00; 4])?;
+                cursor.write_all(&[0x00, 0x01])?;
+                cursor.write_all(&[0x00; 32])?;
+                cursor.write_all(&[0x00, 0x18])?;
+                cursor.write_all(&(-1 as i16).to_be_bytes())?;
                 self.write_avcc(track, cursor)?;
             }
         })
@@ -946,7 +947,7 @@ where
     fn write_esds(&self, track: &Track, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
         mp4_box!(cursor, {
             cursor.write_all(b"esds")?;
-            cursor.write(&[0x00; 4])?;
+            cursor.write_all(&[0x00; 4])?;
             let od_size_of_size = |size: u32| -> u32 {
                 let mut size_of_size = 1;
                 let mut i = size;
@@ -959,9 +960,9 @@ where
             let write_od_len = |mut size: u32, cursor: &mut Cursor<Vec<u8>>| -> Result<(), Error> {
                 while size > 0x7F {
                     size -= 0x7F;
-                    cursor.write(&[0xff])?;
+                    cursor.write_all(&[0xff])?;
                 }
-                cursor.write(&[size as u8])?;
+                cursor.write_all(&[size as u8])?;
                 Ok(())
             };
             if let Some(ref dsi) = track.dsi.as_ref() {
@@ -970,35 +971,35 @@ where
                 let dcd_bytes = dsi_bytes + dsi_size_size + 1 + (1 + 1 + 3 + 4 + 4);
                 let dcd_size_size = od_size_of_size(dcd_bytes);
                 let esd_bytes = dcd_bytes + dcd_size_size + 1 + 3;
-                cursor.write(&[0x03])?;
+                cursor.write_all(&[0x03])?;
                 write_od_len(esd_bytes, cursor)?;
-                cursor.write(&[0x00; 3])?;
-                cursor.write(&[0x04])?;
+                cursor.write_all(&[0x00; 3])?;
+                cursor.write_all(&[0x04])?;
                 write_od_len(dcd_bytes, cursor)?;
-                cursor.write(&[0x40])?;
-                cursor.write(&[5 << 2])?;
-                cursor.write(&[0x00])?;
-                cursor.write(&((track.channel_count * 6144 / 8) as u16).to_be_bytes())?;
-                cursor.write(&[0x00; 8])?;
-                cursor.write(&[0x05])?;
+                cursor.write_all(&[0x40])?;
+                cursor.write_all(&[5 << 2])?;
+                cursor.write_all(&[0x00])?;
+                cursor.write_all(&((track.channel_count * 6144 / 8) as u16).to_be_bytes())?;
+                cursor.write_all(&[0x00; 8])?;
+                cursor.write_all(&[0x05])?;
                 write_od_len(dsi_bytes, cursor)?;
-                cursor.write(&dsi[..])?;
+                cursor.write_all(&dsi[..])?;
             }
         })
     }
     fn write_mp4a(&self, track: &Track, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
         mp4_box!(cursor, {
             cursor.write_all(b"mp4a")?;
-            cursor.write(&[0x00; 4])?;
-            cursor.write(&[0x00; 2])?;
-            cursor.write(&[0x00, 0x01])?;
+            cursor.write_all(&[0x00; 4])?;
+            cursor.write_all(&[0x00; 2])?;
+            cursor.write_all(&[0x00, 0x01])?;
 
             if let TrackType::Audio = track.track_type {
-                cursor.write(&[0x00; 8])?;
-                cursor.write(&(track.channel_count as u16).to_be_bytes())?;
-                cursor.write(&[0x00, 0x10])?; //16 bits per sample
-                cursor.write(&[0x00; 4])?;
-                cursor.write(&(track.sample_rate << 16).to_be_bytes())?;
+                cursor.write_all(&[0x00; 8])?;
+                cursor.write_all(&(track.channel_count as u16).to_be_bytes())?;
+                cursor.write_all(&[0x00, 0x10])?; //16 bits per sample
+                cursor.write_all(&[0x00; 4])?;
+                cursor.write_all(&(track.sample_rate << 16).to_be_bytes())?;
                 self.write_esds(track, cursor)?;
             }
         })
@@ -1006,26 +1007,26 @@ where
     fn write_dops(&self, track: &Track, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
         mp4_box!(cursor, {
             cursor.write_all(b"dops")?;
-            cursor.write(&[0x00])?;
-            cursor.write(&(track.channel_count as u16).to_be_bytes())?;
-            cursor.write(&[0x00; 2])?;
-            cursor.write(&track.sample_rate.to_be_bytes())?;
-            cursor.write(&[0x00; 2])?;
-            cursor.write(&[0x00])?;
+            cursor.write_all(&[0x00])?;
+            cursor.write_all(&(track.channel_count as u16).to_be_bytes())?;
+            cursor.write_all(&[0x00; 2])?;
+            cursor.write_all(&track.sample_rate.to_be_bytes())?;
+            cursor.write_all(&[0x00; 2])?;
+            cursor.write_all(&[0x00])?;
         })
     }
     fn write_opus(&self, track: &Track, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
         mp4_box!(cursor, {
             cursor.write_all(b"opus")?;
-            cursor.write(&[0x00; 4])?;
-            cursor.write(&[0x00; 2])?;
-            cursor.write(&[0x00, 0x01])?;
+            cursor.write_all(&[0x00; 4])?;
+            cursor.write_all(&[0x00; 2])?;
+            cursor.write_all(&[0x00, 0x01])?;
             if let TrackType::Audio = track.track_type {
-                cursor.write(&[0x00; 8])?;
-                cursor.write(&(track.channel_count as u16).to_be_bytes())?;
-                cursor.write(&[0x00, 0x10])?; //16 bits per sample
-                cursor.write(&[0x00; 4])?;
-                cursor.write(&(track.sample_rate << 16).to_be_bytes())?;
+                cursor.write_all(&[0x00; 8])?;
+                cursor.write_all(&(track.channel_count as u16).to_be_bytes())?;
+                cursor.write_all(&[0x00, 0x10])?; //16 bits per sample
+                cursor.write_all(&[0x00; 4])?;
+                cursor.write_all(&(track.sample_rate << 16).to_be_bytes())?;
                 self.write_dops(track, cursor)?;
             }
         })
@@ -1033,8 +1034,8 @@ where
     fn write_stsd(&self, track: &Track, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
         mp4_box!(cursor, {
             cursor.write_all(b"stsd")?;
-            cursor.write(&[0x00; 4])?;
-            cursor.write(&[0x00, 0x00, 0x00, 0x01])?;
+            cursor.write_all(&[0x00; 4])?;
+            cursor.write_all(&[0x00, 0x00, 0x00, 0x01])?;
             if let TrackType::Video = track.track_type {
                 match track.codec {
                     Codec::HEVC => {
@@ -1067,34 +1068,34 @@ where
     fn write_stsc(&self, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
         mp4_box!(cursor, {
             cursor.write_all(b"stsc")?;
-            cursor.write(&[0x00; 4])?;
+            cursor.write_all(&[0x00; 4])?;
             if self.fragment {
-                cursor.write(&[0x00; 4])?;
+                cursor.write_all(&[0x00; 4])?;
             } else {
-                cursor.write(&[0x00, 0x00, 0x00, 0x01])?;
-                cursor.write(&[0x00, 0x00, 0x00, 0x01])?;
-                cursor.write(&[0x00, 0x00, 0x00, 0x01])?;
-                cursor.write(&[0x00, 0x00, 0x00, 0x01])?;
+                cursor.write_all(&[0x00, 0x00, 0x00, 0x01])?;
+                cursor.write_all(&[0x00, 0x00, 0x00, 0x01])?;
+                cursor.write_all(&[0x00, 0x00, 0x00, 0x01])?;
+                cursor.write_all(&[0x00, 0x00, 0x00, 0x01])?;
             }
         })
     }
     fn write_stsz(&self, track: &Track, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
         mp4_box!(cursor, {
             cursor.write_all(b"stsz")?;
-            cursor.write(&[0x00; 4])?;
-            cursor.write(&[0x00; 4])?;
-            cursor.write(&(track.samples.len() as u32).to_be_bytes())?;
+            cursor.write_all(&[0x00; 4])?;
+            cursor.write_all(&[0x00; 4])?;
+            cursor.write_all(&(track.samples.len() as u32).to_be_bytes())?;
             for sample in track.samples.iter() {
-                cursor.write(&sample.sample_size.to_be_bytes())?;
+                cursor.write_all(&sample.sample_size.to_be_bytes())?;
             }
         })
     }
     fn write_stts(&self, track: &Track, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
         mp4_box!(cursor, {
             cursor.write_all(b"stts")?;
-            cursor.write(&[0x00; 4])?;
+            cursor.write_all(&[0x00; 4])?;
             // entry count
-            // cursor.write(&(track.samples.len() as u32).to_be_bytes())?;
+            // cursor.write_all(&(track.samples.len() as u32).to_be_bytes())?;
             let entry_count_idx = cursor.position();
             cursor.seek(SeekFrom::Current(4))?;
             let mut entry_count: u32 = 0;
@@ -1103,8 +1104,8 @@ where
                 if i == track.samples.len() - 1
                     || track.samples[i].sample_delta != track.samples[i + 1].sample_delta
                 {
-                    cursor.write(&cnt.to_be_bytes())?;
-                    cursor.write(&track.samples[i].sample_delta.to_be_bytes())?;
+                    cursor.write_all(&cnt.to_be_bytes())?;
+                    cursor.write_all(&track.samples[i].sample_delta.to_be_bytes())?;
                     cnt = 0;
                     entry_count += 1;
                 }
@@ -1112,25 +1113,25 @@ where
             }
             let end_pos = cursor.position();
             cursor.seek(SeekFrom::Start(entry_count_idx))?;
-            cursor.write(&entry_count.to_be_bytes())?;
+            cursor.write_all(&entry_count.to_be_bytes())?;
             cursor.seek(SeekFrom::Start(end_pos))?;
         })
     }
     fn write_stss(&self, track: &Track, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
         mp4_box!(cursor, {
             cursor.write_all(b"stss")?;
-            cursor.write(&[0x00; 4])?;
+            cursor.write_all(&[0x00; 4])?;
             let entry_point = cursor.position();
             let mut random_access_count = 0 as u32;
             for (i, sample) in track.samples.iter().enumerate() {
                 if sample.random_access {
-                    cursor.write(&(i as u32 + 1).to_be_bytes())?;
+                    cursor.write_all(&(i as u32 + 1).to_be_bytes())?;
                     random_access_count += 1;
                 }
             }
             let end_pos = cursor.position();
             cursor.seek(SeekFrom::Start(entry_point + 12)).unwrap();
-            cursor.write(&random_access_count.to_be_bytes())?;
+            cursor.write_all(&random_access_count.to_be_bytes())?;
             cursor.seek(SeekFrom::Start(end_pos))?;
         })
     }
@@ -1158,34 +1159,34 @@ where
     fn write_co64(&self, track: &Track, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
         mp4_box!(cursor, {
             cursor.write_all(b"co64")?;
-            cursor.write(&[0x00; 4])?;
-            cursor.write(&(track.samples.len() as u32).to_be_bytes())?;
+            cursor.write_all(&[0x00; 4])?;
+            cursor.write_all(&(track.samples.len() as u32).to_be_bytes())?;
             for sample in track.samples.iter() {
-                cursor.write(&sample.offset.to_be_bytes())?;
+                cursor.write_all(&sample.offset.to_be_bytes())?;
             }
         })
     }
     fn write_stco(&self, track: &Track, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
         mp4_box!(cursor, {
             cursor.write_all(b"stco")?;
-            cursor.write(&[0x00; 4])?;
-            cursor.write(&(track.samples.len() as u32).to_be_bytes())?;
+            cursor.write_all(&[0x00; 4])?;
+            cursor.write_all(&(track.samples.len() as u32).to_be_bytes())?;
             for sample in track.samples.iter() {
-                cursor.write(&(sample.offset as u32).to_be_bytes())?;
+                cursor.write_all(&(sample.offset as u32).to_be_bytes())?;
             }
         })
     }
     fn write_url(&self, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
         mp4_box!(cursor, {
             cursor.write_all(b"url ")?;
-            cursor.write(&[0, 0, 0, 1])?;
+            cursor.write_all(&[0, 0, 0, 1])?;
         })
     }
     fn write_dref(&self, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
         mp4_box!(cursor, {
             cursor.write_all(b"dref")?;
             // version & flag
-            cursor.write(&[0x00; 4])?;
+            cursor.write_all(&[0x00; 4])?;
 
             cursor.write_all(b"\x00\x00\x00\x01")?;
             self.write_url(cursor)?;
@@ -1239,9 +1240,9 @@ where
     fn write_trex(&self, track: &Track, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
         mp4_box!(cursor, {
             cursor.write_all(b"trex\x00\x00\x00\x00")?;
-            cursor.write(&track.id.to_be_bytes())?;
-            cursor.write(&[0x00, 0x00, 0x00, 0x01])?;
-            cursor.write(&[0x00; 12])?;
+            cursor.write_all(&track.id.to_be_bytes())?;
+            cursor.write_all(&[0x00, 0x00, 0x00, 0x01])?;
+            cursor.write_all(&[0x00; 12])?;
         })
     }
     fn write_trexs(&mut self, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
@@ -1283,13 +1284,13 @@ where
             };
             cursor.write_all(b"tfhd")?;
             if let TrackType::Video = track.track_type {
-                cursor.write(&0x20020u32.to_be_bytes())?;
-                cursor.write(&track.id.to_be_bytes())?;
-                cursor.write(&0x1010000u32.to_be_bytes())?;
+                cursor.write_all(&0x20020u32.to_be_bytes())?;
+                cursor.write_all(&track.id.to_be_bytes())?;
+                cursor.write_all(&0x1010000u32.to_be_bytes())?;
             } else {
-                cursor.write(&0x20008u32.to_be_bytes())?;
-                cursor.write(&track.id.to_be_bytes())?;
-                cursor.write(&sample_duration.to_be_bytes())?;
+                cursor.write_all(&0x20008u32.to_be_bytes())?;
+                cursor.write_all(&track.id.to_be_bytes())?;
+                cursor.write_all(&sample_duration.to_be_bytes())?;
             }
         })
     }
@@ -1313,34 +1314,34 @@ where
             if let TrackType::Video = track.track_type {
                 if let SampleType::RandomAccess = sample_type {
                     let flags: u32 = 0x001 | 0x004 | 0x100 | 0x200;
-                    cursor.write(&flags.to_be_bytes())?;
-                    cursor.write(&[0x00, 0x00, 0x00, 0x01])?;
+                    cursor.write_all(&flags.to_be_bytes())?;
+                    cursor.write_all(&[0x00, 0x00, 0x00, 0x01])?;
                     data_offset_pos = cursor.position();
                     cursor.seek(SeekFrom::Current(4))?;
-                    cursor.write(&0x2000000u32.to_be_bytes())?;
-                    cursor.write(&sample_duration.to_be_bytes())?;
-                    cursor.write(&data_size.to_be_bytes())?;
+                    cursor.write_all(&0x2000000u32.to_be_bytes())?;
+                    cursor.write_all(&sample_duration.to_be_bytes())?;
+                    cursor.write_all(&data_size.to_be_bytes())?;
                 } else {
                     let flags: u32 = 0x001 | 0x100 | 0x200;
-                    cursor.write(&flags.to_be_bytes())?;
-                    cursor.write(&[0x00, 0x00, 0x00, 0x01])?;
+                    cursor.write_all(&flags.to_be_bytes())?;
+                    cursor.write_all(&[0x00, 0x00, 0x00, 0x01])?;
                     data_offset_pos = cursor.position();
                     cursor.seek(SeekFrom::Current(4))?;
-                    cursor.write(&sample_duration.to_be_bytes())?;
-                    cursor.write(&data_size.to_be_bytes())?;
+                    cursor.write_all(&sample_duration.to_be_bytes())?;
+                    cursor.write_all(&data_size.to_be_bytes())?;
                 }
             } else {
                 let flags: u32 = 0x001 | 0x200;
-                cursor.write(&flags.to_be_bytes())?;
-                cursor.write(&[0x00, 0x00, 0x00, 0x01])?;
+                cursor.write_all(&flags.to_be_bytes())?;
+                cursor.write_all(&[0x00, 0x00, 0x00, 0x01])?;
                 data_offset_pos = cursor.position();
                 cursor.seek(SeekFrom::Current(4))?;
-                cursor.write(&data_size.to_be_bytes())?;
+                cursor.write_all(&data_size.to_be_bytes())?;
             }
             let end_pos = cursor.position();
             let data_offset = (end_pos - moof_pos + 8) as u32;
             cursor.seek(SeekFrom::Start(data_offset_pos))?;
-            cursor.write(&data_offset.to_be_bytes())?;
+            cursor.write_all(&data_offset.to_be_bytes())?;
             cursor.seek(SeekFrom::Start(end_pos)).unwrap();
         })
     }
@@ -1394,13 +1395,13 @@ where
         if video {
             box_size += 4;
         }
-        self.writer.write(&box_size.to_be_bytes())?;
+        self.writer.write_all(&box_size.to_be_bytes())?;
         self.writer.write_all(b"mdat")?;
         if video {
             let nal_size_buf = (buf.len() as u32).to_be_bytes();
-            self.writer.write(&nal_size_buf)?;
+            self.writer.write_all(&nal_size_buf)?;
         }
-        self.writer.write(buf)?;
+        self.writer.write_all(buf)?;
 
         self.write_pos += box_size as u64;
 
@@ -1432,7 +1433,7 @@ where
             let mut cursor = Cursor::new(&mut buf[..]);
             self.write_moof(data, duration, video, sample_type, &mut cursor)?;
             let end_pos = cursor.position();
-            self.writer.write(&buf[..end_pos as usize])?;
+            self.writer.write_all(&buf[..end_pos as usize])?;
             self.write_pos += end_pos as u64;
             self.write_mdat(data, video)?;
             return Ok(());
@@ -1445,7 +1446,7 @@ where
                 sample_delta: duration,
             };
             self.audio_track.as_mut().unwrap().samples.push(sample_info);
-            self.writer.write(data)?;
+            self.writer.write_all(data)?;
             self.write_pos += data.len() as u64;
         } else {
             if let SampleType::Default | SampleType::RandomAccess = sample_type {
@@ -1466,8 +1467,8 @@ where
                 last_sample.sample_size += data.len() as u32 + 4;
             }
             let nal_size_buf = (data.len() as u32).to_be_bytes();
-            self.writer.write(&nal_size_buf[..])?;
-            self.writer.write(data)?;
+            self.writer.write_all(&nal_size_buf[..])?;
+            self.writer.write_all(data)?;
             self.write_pos += data.len() as u64 + 4;
         }
 
