@@ -1,0 +1,16 @@
+[package]
+name = "mp4e"
+version = "0.9.1"
+edition = "2024"
+author = ["aaaaa123ads@163.com"]
+description = "A simple MP4 muxer library for pure Rust."
+repository = "https://github.com/xjunl22/mp4e"
+keywords = ["mp4", "muxer", "video", "audio"]
+license = "MIT"
+readme = "README.md"
+categories = ["multimedia"]
+
+[dependencies]
+
+[lib]
+
