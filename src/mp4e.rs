@@ -250,12 +250,12 @@ where
     /// ```
     pub fn set_audio_track(&mut self, sample_rate: u32, channel_count: u32, codec: Codec) {
         let profile = match codec {
-            Codec::AACMAIN => 0x01,
-            Codec::AACLC => 0x02,
-            Codec::AACSSR => 0x03,
-            Codec::AACLTP => 0x04,
-            Codec::HEAAC => 0x05,
-            Codec::HEAACV2 => 0x29,
+            Codec::AACMAIN => 1,
+            Codec::AACLC => 2,
+            Codec::AACSSR => 3,
+            Codec::AACLTP => 4,
+            Codec::HEAAC => 5,
+            Codec::HEAACV2 => 29,
             _ => 0,
         };
         let mut dsi = None;
