@@ -50,7 +50,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     
     // Write audio frame data
     let audio_frame_data = vec![/* your audio frame data */];
-    muxer.encode_audio(&audio_frame_data, 1024)?; // 1024 samples
+    muxer.encode_audio(&audio_frame_data, 1024)?; // 1024 samples or encode_video_with_pts
     
     // Finish writing
     muxer.flush()?;

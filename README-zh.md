@@ -46,7 +46,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     
     // 写入视频帧数据 (假设你已经有了编码好的 NALU 数据)
     let video_frame_data = vec![/* 你的视频帧数据 */];
-    muxer.encode_video(&video_frame_data, 33)?; // 每帧 33ms (~30fps)
+    muxer.encode_video(&video_frame_data, 33)?; // 每帧 33ms (~30fps) 或者encode_video_with_pts
     
     // 写入音频帧数据
     let audio_frame_data = vec![/* 你的音频帧数据 */];
