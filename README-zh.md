@@ -20,7 +20,7 @@
 
 ```toml
 [dependencies]
-mp4e = "0.9"
+mp4e = "1.0"
 ```
 
 ### 创建标准 MP4 文件

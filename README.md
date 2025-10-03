@@ -20,7 +20,7 @@ Add this to your Cargo.toml:
 
 ```toml
 [dependencies]
-mp4e = "0.9"
+mp4e = "1.0"
 ```
 
 ### Creating a Standard MP4 File
@@ -46,11 +46,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     
     // Write video frame data (assuming you have encoded NALU data)
     let video_frame_data = vec![/* your video frame data */];
-    muxer.encode_video(&video_frame_data, 33)?; // 33ms per frame (~30fps)
+    muxer.encode_video(&video_frame_data, 33)?; // 33ms per frame (~30fps) or encode_video_with_pts
     
     // Write audio frame data
     let audio_frame_data = vec![/* your audio frame data */];
-    muxer.encode_audio(&audio_frame_data, 1024)?; // 1024 samples or encode_video_with_pts
+    muxer.encode_audio(&audio_frame_data, 1024)?; // 1024 samples 
     
     // Finish writing
     muxer.flush()?;
