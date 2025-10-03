@@ -10,6 +10,9 @@ license = "MIT"
 readme = "README.md"
 categories = ["multimedia"]
 
+[package.metadata.docs.rs]
+features = ["std"]
+
 [dependencies]
 
 [lib]
