@@ -68,6 +68,8 @@ struct SampleInfo {
     sample_size: u32,
     /// Duration of the sample
     sample_delta: u32,
+    // Continuation offset
+    sample_ct_offset: i32,
 }
 
 /// Track information structure
@@ -363,13 +365,13 @@ where
             if self.send_first_random_access {
                 let duration = samples;
                 track.duration += duration;
-                self.put_sample(data, duration, false, SampleType::RandomAccess)?;
+                self.put_sample(data, duration, false, 0, SampleType::RandomAccess)?;
             }
         }
         Ok(())
     }
 
-    /// Writes a video frame to the MP4 file
+    /// Writes a video frame to the MP4 file (with no b frame)
     ///
     /// # Arguments
     /// * `data` - The video frame data
@@ -405,12 +407,74 @@ where
                 self.duration
             };
             match track.codec {
-                Codec::AVC => self.write_avc_frame(data, duration)?,
-                Codec::HEVC => self.write_hevc_frame(data, duration)?,
+                Codec::AVC => self.write_avc_frame(data, duration, 0)?,
+                Codec::HEVC => self.write_hevc_frame(data, duration, 0)?,
                 _ => {}
             }
         }
 
+        Ok(())
+    }
+    /// Writes a video frame to the MP4 file with presentation timestamp (PTS)，support b frame
+    ///
+    /// This method allows for more precise control over video frame timing by accepting
+    /// a presentation timestamp. It calculates the composition time offset (ct_offset)
+    /// which represents the difference between decode time and presentation time.
+    ///
+    /// # Arguments
+    /// * `data` - The video frame data (NAL units)
+    /// * `duration` - The duration of the video frame in milliseconds
+    /// * `pts` - Presentation timestamp in the track's timescale
+    ///
+    /// # Returns
+    /// * `Ok(())` on success, or an error if writing fails
+    ///
+    /// # Example
+    /// ```
+    /// use std::io::Cursor;
+    /// use mp4e::{Mp4e, Codec};
+    ///
+    /// let mut buffer = Vec::new();
+    /// let mut writer = Cursor::new(&mut buffer);
+    /// let mut muxer = Mp4e::new(&mut writer);
+    ///
+    /// // Set up video track first
+    /// muxer.set_video_track(1920, 1080, Codec::AVC);
+    ///
+    /// // Encode a video frame with specific PTS
+    /// let video_frame_data = vec![0; 1024]; // Example video frame data
+    /// muxer.encode_video_with_pts(&video_frame_data, 33, 1000).unwrap();
+    /// ```
+    pub fn encode_video_with_pts(
+        &mut self,
+        data: &[u8],
+        duration: u32,
+        pts: u32,
+    ) -> Result<(), Error> {
+        self.init_header_if_needed()?;
+        if let Some(track) = self.video_track.as_mut() {
+            // Convert duration from milliseconds to track timescale
+            let duration = duration * track.timescale / 1000;
+            track.duration += duration;
+
+            // Update the overall media duration if this track is longer
+            self.duration = if track.duration > self.duration {
+                track.duration
+            } else {
+                self.duration
+            };
+
+            // Calculate composition time offset (decode time to presentation time offset)
+            let ct_offset =
+                ((pts as i64) * track.timescale as i64 / 1000 - track.duration as i64) as i32;
+
+            // Process the frame based on codec type
+            match track.codec {
+                Codec::AVC => self.write_avc_frame(data, duration, ct_offset)?,
+                Codec::HEVC => self.write_hevc_frame(data, duration, ct_offset)?,
+                _ => {}
+            }
+        }
         Ok(())
     }
 }
@@ -531,11 +595,17 @@ where
     /// # Arguments
     /// * `data` - The raw HEVC NAL unit data to process
     /// * `duration` - The duration of the frame in the track's timescale
+    /// * `ct_offset` - The composition time offset for the frame
     ///
     ///
     /// # Returns
     /// * `Ok(())` on successful processing, or an error if writing fails
-    fn write_hevc_frame(&mut self, data: &[u8], duration: u32) -> Result<(), Error> {
+    fn write_hevc_frame(
+        &mut self,
+        data: &[u8],
+        duration: u32,
+        ct_offset: i32,
+    ) -> Result<(), Error> {
         use crate::nalu::*;
         // Split the input data into individual NAL units
         for frame_data in split_nalu(data) {
@@ -577,14 +647,26 @@ where
                         // Key frame types are in the range [BLA_W_LP, CRA_NUT]
                         if nalu_type >= HEVC_NAL_BLA_W_LP && nalu_type <= HEVC_NAL_CRA_NUT {
                             // Write the key frame as a random access sample
-                            self.put_sample(frame_data, duration, true, SampleType::RandomAccess)?;
+                            self.put_sample(
+                                frame_data,
+                                duration,
+                                true,
+                                ct_offset,
+                                SampleType::RandomAccess,
+                            )?;
                             // Mark that we've received our first key frame
                             self.send_first_random_access = true;
                         }
                         // For non-key frames, only write them after we've received the first key frame
                         else if self.send_first_random_access {
                             // Write as a default (non-key) sample
-                            self.put_sample(frame_data, duration, true, SampleType::Default)?;
+                            self.put_sample(
+                                frame_data,
+                                duration,
+                                true,
+                                ct_offset,
+                                SampleType::Default,
+                            )?;
                         }
                     }
                 }
@@ -607,6 +689,7 @@ where
     /// # Arguments
     /// * `data` - The raw AVC NAL unit data to process
     /// * `duration` - The duration of the frame in the track's timescale
+    /// * `ct_offset` - The composition time offset for the frame
     ///
     /// # AVC Specifics
     /// - NAL unit types are determined by the last 5 bits of the first byte
@@ -615,7 +698,7 @@ where
     ///
     /// # Returns
     /// * `Ok(())` on successful processing, or an error if writing fails
-    fn write_avc_frame(&mut self, data: &[u8], duration: u32) -> Result<(), Error> {
+    fn write_avc_frame(&mut self, data: &[u8], duration: u32, ct_offset: i32) -> Result<(), Error> {
         use crate::nalu::*;
         // Split the input data into individual NAL units
         for frame_data in split_nalu(data) {
@@ -667,12 +750,12 @@ where
                             // Mark that we've received our first key frame
                             self.send_first_random_access = true;
                             // Write the frame data as a video sample
-                            self.put_sample(frame_data, duration, true, sample_type)?;
+                            self.put_sample(frame_data, duration, true, ct_offset, sample_type)?;
                         }
                         // For non-I frames, only write them after we've received the first key frame
                         else if self.send_first_random_access {
                             // Write as a regular or continuation sample
-                            self.put_sample(frame_data, duration, true, sample_type)?;
+                            self.put_sample(frame_data, duration, true, ct_offset, sample_type)?;
                         }
                     }
                 }
@@ -1117,6 +1200,32 @@ where
             cursor.seek(SeekFrom::Start(end_pos))?;
         })
     }
+
+    fn write_ctts(&self, track: &Track, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
+        mp4_box!(cursor, {
+            cursor.write_all(b"ctts")?;
+            cursor.write_all(&[0x00; 4])?;
+            let entry_count_idx = cursor.position();
+            cursor.seek(SeekFrom::Current(4))?;
+            let mut entry_count: u32 = 0;
+            let mut cnt: u32 = 1;
+            for i in 0..track.samples.len() {
+                if i == track.samples.len() - 1
+                    || track.samples[i].sample_ct_offset != track.samples[i + 1].sample_ct_offset
+                {
+                    cursor.write_all(&cnt.to_be_bytes())?;
+                    cursor.write_all(&track.samples[i].sample_ct_offset.to_be_bytes())?;
+                    cnt = 0;
+                    entry_count += 1;
+                }
+                cnt += 1;
+            }
+            let end_pos = cursor.position();
+            cursor.seek(SeekFrom::Start(entry_count_idx))?;
+            cursor.write_all(&entry_count.to_be_bytes())?;
+            cursor.seek(SeekFrom::Start(end_pos))?;
+        })
+    }
     fn write_stss(&self, track: &Track, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
         mp4_box!(cursor, {
             cursor.write_all(b"stss")?;
@@ -1135,11 +1244,13 @@ where
             cursor.seek(SeekFrom::Start(end_pos))?;
         })
     }
+
     fn write_stbl(&self, track: &Track, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
         mp4_box!(cursor, {
             cursor.write_all(b"stbl")?;
             self.write_stsd(track, cursor)?;
             self.write_stts(track, cursor)?;
+            self.write_ctts(track, cursor)?;
             self.write_stsc(cursor)?;
             self.write_stsz(track, cursor)?;
             if track.samples.len() > 0 {
@@ -1302,6 +1413,7 @@ where
         video: bool,
         data_size: u32,
         sample_duration: u32,
+        ct_offset: i32,
         sample_type: SampleType,
         cursor: &mut Cursor<&mut [u8]>,
     ) -> Result<(), Error> {
@@ -1315,7 +1427,7 @@ where
             let data_offset_pos;
             if let TrackType::Video = track.track_type {
                 if let SampleType::RandomAccess = sample_type {
-                    let flags: u32 = 0x001 | 0x004 | 0x100 | 0x200;
+                    let flags: u32 = 0x001 | 0x004 | 0x100 | 0x200 | 0x800;
                     cursor.write_all(&flags.to_be_bytes())?;
                     cursor.write_all(&[0x00, 0x00, 0x00, 0x01])?;
                     data_offset_pos = cursor.position();
@@ -1323,14 +1435,16 @@ where
                     cursor.write_all(&0x2000000u32.to_be_bytes())?;
                     cursor.write_all(&sample_duration.to_be_bytes())?;
                     cursor.write_all(&data_size.to_be_bytes())?;
+                    cursor.write_all(&ct_offset.to_be_bytes())?;
                 } else {
-                    let flags: u32 = 0x001 | 0x100 | 0x200;
+                    let flags: u32 = 0x001 | 0x100 | 0x200 | 0x800;
                     cursor.write_all(&flags.to_be_bytes())?;
                     cursor.write_all(&[0x00, 0x00, 0x00, 0x01])?;
                     data_offset_pos = cursor.position();
                     cursor.seek(SeekFrom::Current(4))?;
                     cursor.write_all(&sample_duration.to_be_bytes())?;
                     cursor.write_all(&data_size.to_be_bytes())?;
+                    cursor.write_all(&ct_offset.to_be_bytes())?;
                 }
             } else {
                 let flags: u32 = 0x001 | 0x200;
@@ -1353,6 +1467,7 @@ where
         video: bool,
         data: &[u8],
         sample_duration: u32,
+        ct_offset: i32,
         sample_type: SampleType,
         cursor: &mut Cursor<&mut [u8]>,
     ) -> Result<(), Error> {
@@ -1364,6 +1479,7 @@ where
                 video,
                 data.len() as u32 + 4,
                 sample_duration,
+                ct_offset,
                 sample_type,
                 cursor,
             )?;
@@ -1381,6 +1497,7 @@ where
         data: &[u8],
         duration: u32,
         video: bool,
+        ct_offset: i32,
         sample_type: SampleType,
         cursor: &mut Cursor<&mut [u8]>,
     ) -> Result<(), Error> {
@@ -1388,7 +1505,15 @@ where
             let moov_pos = cursor.position() - 4;
             cursor.write_all(b"moof")?;
             self.write_mfhd(cursor)?;
-            self.write_traf(moov_pos, video, data, duration, sample_type, cursor)?;
+            self.write_traf(
+                moov_pos,
+                video,
+                data,
+                duration,
+                ct_offset,
+                sample_type,
+                cursor,
+            )?;
         })
     }
 
@@ -1426,6 +1551,7 @@ where
         data: &[u8],
         duration: u32,
         video: bool,
+        ct_offset: i32,
         sample_type: SampleType,
     ) -> Result<(), Error> {
         if self.fragment {
@@ -1433,7 +1559,7 @@ where
             self.fregment_id += 1;
             let mut buf: [u8; 4096] = [0; 4096];
             let mut cursor = Cursor::new(&mut buf[..]);
-            self.write_moof(data, duration, video, sample_type, &mut cursor)?;
+            self.write_moof(data, duration, video, ct_offset, sample_type, &mut cursor)?;
             let end_pos = cursor.position();
             self.writer.write_all(&buf[..end_pos as usize])?;
             self.write_pos += end_pos as u64;
@@ -1446,6 +1572,7 @@ where
                 offset: self.write_pos,
                 sample_size: data.len() as u32,
                 sample_delta: duration,
+                sample_ct_offset: ct_offset,
             };
             self.audio_track.as_mut().unwrap().samples.push(sample_info);
             self.writer.write_all(data)?;
@@ -1461,6 +1588,7 @@ where
                     offset: self.write_pos,
                     sample_size: data.len() as u32 + 4,
                     sample_delta: duration,
+                    sample_ct_offset: ct_offset,
                 };
                 self.video_track.as_mut().unwrap().samples.push(sample_info);
             } else {
