@@ -1150,7 +1150,9 @@ where
                     self.write_stco(track, cursor)?;
                 }
             }
-            if let TrackType::Video = track.track_type {
+            if let TrackType::Video = track.track_type
+                && !self.fragment
+            {
                 //stss
                 self.write_stss(track, cursor)?;
             }
@@ -1409,7 +1411,7 @@ where
     }
     fn init_mp4(&mut self) -> Result<(), Error> {
         self.writer
-            .write_all(b"\x00\x00\x00\x18ftypmp42\x00\x00\x00\x00mp42isom\x00\x00\x00\x08free")?;
+            .write_all(b"\x00\x00\x00\x20ftypisom\x00\x00\x00\x00mp41isomiso6iso2")?;
         self.write_pos += 32;
         if !self.fragment {
             // mdat
