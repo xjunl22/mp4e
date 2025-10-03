@@ -1202,6 +1202,16 @@ where
     }
 
     fn write_ctts(&self, track: &Track, cursor: &mut Cursor<Vec<u8>>) -> Result<(), Error> {
+        let mut has_ctts = false;
+        for sample in track.samples.iter() {
+            if sample.sample_ct_offset != 0 {
+                has_ctts = true;
+                break;
+            }
+        }
+        if !has_ctts {
+            return Ok(());
+        }
         mp4_box!(cursor, {
             cursor.write_all(b"ctts")?;
             cursor.write_all(&[0x00; 4])?;
@@ -1231,6 +1241,7 @@ where
             cursor.write_all(b"stss")?;
             cursor.write_all(&[0x00; 4])?;
             let entry_point = cursor.position();
+            cursor.seek(SeekFrom::Current(4))?;
             let mut random_access_count = 0 as u32;
             for (i, sample) in track.samples.iter().enumerate() {
                 if sample.random_access {
@@ -1239,7 +1250,7 @@ where
                 }
             }
             let end_pos = cursor.position();
-            cursor.seek(SeekFrom::Start(entry_point + 12)).unwrap();
+            cursor.seek(SeekFrom::Start(entry_point)).unwrap();
             cursor.write_all(&random_access_count.to_be_bytes())?;
             cursor.seek(SeekFrom::Start(end_pos))?;
         })
