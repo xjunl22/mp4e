@@ -336,8 +336,15 @@ where
     ///
     /// # Arguments
     /// * `data` - The audio data
-    /// * `samples` - sample count.The duration of the audio sample
-    ///
+    /// * `samples` - The number of audio samples in this frame. This represents
+    ///               the duration in sample count, not bytes. For example, if you
+    ///               have 1024 PCM samples that were encoded, you pass 1024 here.
+    ///               If you only know the duration in milliseconds, you can estimate
+    ///               the sample count using the formula: duration_ms * sample_rate / 1000.
+    ///               For example, with a 48kHz sample rate and 21.33ms duration:
+    ///               samples = 21.33 * 48000 / 1000 = 1024 samples.
+    ///               
+    ///     
     /// # Returns
     /// * `Ok(())` on success, or an error if writing fails
     ///

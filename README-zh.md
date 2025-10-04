@@ -100,11 +100,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 - H.264/AVC
 - H.265/HEVC
 
-## 功能限制
 
-当前版本的 mp4e 仅支持以下轨道配置：
-- 最多1个视频轨道
-- 最多1个音频轨道（可选）
 
 ### 音频编解码器
 - AAC-LC
@@ -114,3 +110,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 - HE-AAC
 - HE-AAC-v2
 - Opus
+
+
+## 功能限制
+
+当前版本的 mp4e 仅支持以下轨道配置：
+- 最多1个视频轨道
+- 最多1个音频轨道（可选）
+- 仅支持原始样本位深度为 16 的音频数据（PCM 16-bit）

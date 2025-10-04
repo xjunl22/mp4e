@@ -100,11 +100,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 - H.264/AVC
 - H.265/HEVC
 
-## Limitations
 
-The current version of mp4e only supports the following track configuration:
-- Up to 1 video track
-- Up to 1 audio track (optional)
 
 ### Audio Codecs
 - AAC-LC
@@ -114,3 +110,13 @@ The current version of mp4e only supports the following track configuration:
 - HE-AAC
 - HE-AAC-v2
 - Opus
+
+
+## Limitations
+
+The current version of mp4e only supports the following track configuration:
+- Up to 1 video track
+- Up to 1 audio track (optional)
+- Only supports audio data with original sample bits of 16 (PCM 16-bit)
+
+
