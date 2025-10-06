@@ -3,10 +3,13 @@
 #![doc = include_str!("../README.md")]
 #![doc = include_str!("../LICENSE")]
 
+mod boxes;
 mod mp4e;
 pub mod nalu;
+mod types;
 mod util;
-pub use mp4e::{Codec, Mp4e};
+pub use mp4e::Mp4e;
+pub use types::Codec;
 
 #[cfg(test)]
 mod tests {

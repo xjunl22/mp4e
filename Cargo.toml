@@ -1,6 +1,6 @@
 [package]
 name = "mp4e"
-version = "1.0.3"
+version = "1.0.4"
 edition = "2024"
 author = ["aaaaa123ads@163.com"]
 description = "A simple MP4 muxer library for pure Rust."
