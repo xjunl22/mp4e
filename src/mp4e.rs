@@ -1,6 +1,7 @@
 // use mp4e_macros::mp4_box;
 use crate::boxes::*;
 use crate::types::*;
+use std::convert::TryInto;
 use std::io::{Cursor, Error, Seek, SeekFrom, Write};
 use std::vec;
 
