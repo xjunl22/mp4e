@@ -616,11 +616,11 @@ where
                 write_stco(&track.samples, cursor)?;
             }
         }
-        if let TrackType::Video = track.track_type
-            && !fragment
-        {
-            //stss
-            write_stss(&track.samples, cursor)?;
+        if !fragment {
+            if let TrackType::Video = track.track_type {
+                //stss
+                write_stss(&track.samples, cursor)?;
+            }
         }
     })
 }
